@@ -504,3 +504,18 @@ GetX509NotAfter(
 
     return NULL;
 }
+
+extern "C"
+int
+PALAPI
+GetX509Version(
+    X509* x509)
+{
+    if (x509 && x509->cert_info)
+    {
+        long ver = ASN1_INTEGER_get(x509->cert_info->version);
+        return (int)ver;
+    }
+
+    return -1;
+}
