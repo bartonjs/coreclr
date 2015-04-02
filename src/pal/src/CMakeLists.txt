@@ -170,6 +170,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
     ${CORESERVICES}
     ${SECURITY}
     ${SYSTEM}
+    crypto
   )
 endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 
