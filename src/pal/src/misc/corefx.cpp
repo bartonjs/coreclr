@@ -25,6 +25,8 @@ Abstract:
 #include <errno.h>
 #include <unistd.h>
 #include <dlfcn.h>
+#include <openssl/x509.h>
+//#include <openssl/x509.h>
 
 #ifdef __APPLE__
 #include <mach-o/dyld.h>
@@ -47,12 +49,12 @@ static void* g_OpenSslLib;
 static pthread_mutex_t g_OpenSslInitLock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t *g_OpenSslLocks;
 
-#define CRYPTO_LOCK 1
+//#define CRYPTO_LOCK 1
 typedef void(*locking_function)(int mode, int n, char* file, int line);
-typedef int(*CRYPTO_num_locks)(void);
-typedef void(*CRYPTO_set_locking_callback)(locking_function callback);
+//typedef int(*CRYPTO_num_locks)(void);
+//typedef void(*CRYPTO_set_locking_callback)(locking_function callback);
 
-static void LockingCallback(int mode, int n, char* file, int line)
+static void LockingCallback(int mode, int n, const char* file, int line)
 {
     int result;
     if (mode & CRYPTO_LOCK)
@@ -77,8 +79,8 @@ EnsureOpenSslInitialized()
 {
     int ret = 0;
     int numLocks;
-    CRYPTO_num_locks numLocksFunc;
-    CRYPTO_set_locking_callback setCallbackFunc;
+    //CRYPTO_num_locks numLocksFunc;
+    //CRYPTO_set_locking_callback setCallbackFunc;
     int locksInitialized = 0;
 
     PERF_ENTRY(EnsureOpenSslInitialized);
@@ -103,17 +105,18 @@ EnsureOpenSslInitialized()
     }
 
     // Get the functions we need from OpenSSL
-    numLocksFunc = (CRYPTO_num_locks) dlsym(g_OpenSslLib, "CRYPTO_num_locks");
-    setCallbackFunc = (CRYPTO_set_locking_callback) dlsym(g_OpenSslLib, "CRYPTO_set_locking_callback");
-    if (numLocksFunc == NULL || setCallbackFunc == NULL)
-    {
-        ASSERT("Unable to find CRYPTO_num_locks or CRYPTO_set_locking_callback\n");
-        ret = 2;
-        goto done;
-    }
+    //numLocksFunc = (CRYPTO_num_locks) dlsym(g_OpenSslLib, "CRYPTO_num_locks");
+    //setCallbackFunc = (CRYPTO_set_locking_callback) dlsym(g_OpenSslLib, "CRYPTO_set_locking_callback");
+    //if (numLocksFunc == NULL || setCallbackFunc == NULL)
+    //{
+        //ASSERT("Unable to find CRYPTO_num_locks or CRYPTO_set_locking_callback\n");
+        //ret = 2;
+        //goto done;
+    //}
 
     // Determine how many locks are needed
-    numLocks = numLocksFunc();
+    //numLocks = numLocksFunc();
+    numLocks = CRYPTO_num_locks();
     if (numLocks <= 0)
     {
         ASSERT("CRYPTO_num_locks returned invalid value: %d\n", numLocks);
@@ -142,7 +145,8 @@ EnsureOpenSslInitialized()
     }
 
     // Initialize the callback
-    setCallbackFunc((locking_function) LockingCallback);
+    CRYPTO_set_locking_callback(LockingCallback);
+    //setCallbackFunc((locking_function) LockingCallback);
 
 done:
     if (ret != 0)
@@ -440,4 +444,63 @@ GetFileInformationFromFd(
     PERF_EXIT(GetFileInformationFromFd);
 
     return success ? 0 : -1;
+}
+
+extern "C"
+int
+PALAPI
+GetX509Thumbprint(
+    X509* x509,
+    unsigned char* pBuf,
+    int cBuf)
+{
+    if (!x509)
+    {
+        return 0;
+    }
+
+    if (cBuf < SHA_DIGEST_LENGTH)
+    {
+        return -SHA_DIGEST_LENGTH;
+    }
+
+    if (!pBuf)
+    {
+        return 0;
+    }
+
+    for (int i = 0; i < SHA_DIGEST_LENGTH; i++)
+    {
+        pBuf[i] = x509->sha1_hash[i];
+    }
+
+    return 1;
+}
+
+extern "C"
+ASN1_INTEGER*
+PALAPI
+GetX509NotBefore(
+    X509* x509)
+{
+    if (x509 && x509->cert_info && x509->cert_info->validity)
+    {
+        return x509->cert_info->validity->notBefore;
+    }
+
+    return NULL;
+}
+
+extern "C"
+ASN1_INTEGER*
+PALAPI
+GetX509NotAfter(
+    X509* x509)
+{
+    if (x509 && x509->cert_info && x509->cert_info->validity)
+    {
+        return x509->cert_info->validity->notAfter;
+    }
+
+    return NULL;
 }

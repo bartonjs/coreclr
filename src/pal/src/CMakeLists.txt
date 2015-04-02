@@ -156,6 +156,7 @@ target_link_libraries(CoreClrPal
   rt
   dl
   unwind
+  crypto
 )
 endif(CMAKE_SYSTEM_NAME STREQUAL Linux)
 
