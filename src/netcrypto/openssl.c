@@ -28,7 +28,7 @@ GetX509Thumbprint(
         return -SHA_DIGEST_LENGTH;
     }
 
-    memcpy_s(pBuf, cBuf, x509->sha1_hash, SHA_DIGEST_LENGTH);
+    memcpy(pBuf, x509->sha1_hash, SHA_DIGEST_LENGTH);
     return 1;
 }
 
