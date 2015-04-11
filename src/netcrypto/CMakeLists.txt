@@ -1,5 +1,5 @@
 
-project(netcrypto)
+project(System.Security.Cryptography.Native)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -13,31 +13,25 @@ endif(CMAKE_SYSTEM_NAME STREQUAL Linux)
 
 add_definitions(-DPLATFORM_UNIX=1)
 add_definitions(-DLP64COMPATIBLE=1)
-#add_definitions(-DFEATURE_PAL=1)
-#add_definitions(-DCORECLR=1)
 add_definitions(-DPIC=1)
 add_definitions(-DBIT64=1)
-#add_definitions(-D_WIN64=1)
 
-#add_compile_options(-fno-builtin)
 add_compile_options(-fPIC)
 
-include_directories(../pal/inc)
-include_directories(../pal/src/include)
-
-set(NETCRYPTO_SOURCES
+set(NATIVECRYPTO_SOURCES
     openssl.c
 )
 
-set(WITH_X509_INCLUDES "" CACHE PATH "Path to openssl headers")
-
-add_library(netcrypto
+add_library(System.Security.Cryptography.Native
     SHARED
-    ${NETCRYPTO_SOURCES}
+    ${NATIVECRYPTO_SOURCES}
 )
 
-target_link_libraries(netcrypto
+# Disable the "lib" prefix.
+set_target_properties(System.Security.Cryptography.Native PROPERTIES PREFIX "")
+
+target_link_libraries(System.Security.Cryptography.Native
   crypto
 )
 
-install (TARGETS netcrypto DESTINATION .)
+install (TARGETS System.Security.Cryptography.Native DESTINATION .)
