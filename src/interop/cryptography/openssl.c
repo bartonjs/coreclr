@@ -3,16 +3,13 @@
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 //
 
-#include "netcrypto.h"
 #include <stdio.h>
 #include <openssl/asn1.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
-//#define PALAPI __stdcall
 
 int
-PALAPI
 GetX509Thumbprint(
     X509* x509,
     unsigned char* pBuf,
@@ -33,7 +30,6 @@ GetX509Thumbprint(
 }
 
 ASN1_INTEGER*
-PALAPI
 GetX509NotBefore(
     X509* x509)
 {
@@ -46,7 +42,6 @@ GetX509NotBefore(
 }
 
 ASN1_INTEGER*
-PALAPI
 GetX509NotAfter(
     X509* x509)
 {
@@ -59,7 +54,6 @@ GetX509NotAfter(
 }
 
 int
-PALAPI
 GetX509Version(
     X509* x509)
 {
@@ -73,7 +67,6 @@ GetX509Version(
 }
 
 const char*
-PALAPI
 GetX509PublicKeyAlgorithm(
     X509* x509)
 {
@@ -86,7 +79,6 @@ GetX509PublicKeyAlgorithm(
 }
 
 ASN1_BIT_STRING*
-PALAPI
 GetX509PublicKeyBytes(
     X509* x509)
 {
@@ -99,7 +91,6 @@ GetX509PublicKeyBytes(
 }
 
 RSA*
-PALAPI
 GetEvpPkeyRsa(
     EVP_PKEY* pkey)
 {
