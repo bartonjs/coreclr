@@ -8,6 +8,7 @@
 #include <openssl/bio.h>
 #include <openssl/evp.h>
 #include <openssl/x509.h>
+#include <openssl/x509v3.h>
 
 int
 GetX509Thumbprint(
@@ -78,6 +79,16 @@ GetX509PublicKeyAlgorithm(
     return NULL;
 }
 
+const char*
+GetX509SignatureAlgorithm(
+    X509* x509)
+{
+    if (x509 && x509->sig_alg && x509->sig_alg->algorithm)
+    {
+        return OBJ_nid2ln(OBJ_obj2nid(x509->sig_alg->algorithm));
+    }
+}
+
 ASN1_BIT_STRING*
 GetX509PublicKeyBytes(
     X509* x509)
@@ -90,14 +101,76 @@ GetX509PublicKeyBytes(
     return NULL;
 }
 
-RSA*
-GetEvpPkeyRsa(
-    EVP_PKEY* pkey)
+// Many ASN1 types are actually the same type in OpenSSL:
+// STRING
+// INTEGER
+// ENUMERATED
+// BIT_STRING
+// OCTET_STRING
+// PRINTABLESTRING
+// T61STRING
+// IA5STRING
+// GENERALSTRING
+// UNIVERSALSTRING
+// BMPSTRING
+// UTCTIME
+// TIME
+// GENERALIZEDTIME
+// VISIBLEStRING
+// UTF8STRING
+//
+// So this function will really work on all of them.
+int
+GetAsn1StringBytes(
+    ASN1_STRING* asn1,
+    unsigned char* pBuf,
+    int cBuf)
 {
-    if (pkey)
+    if (!asn1)
     {
-        return pkey->pkey.rsa;
+        return 0;
     }
 
-    return NULL;
+    if (!pBuf || cBuf < asn1->length)
+    {
+        return -asn1->length;
+    }
+
+    memcpy(pBuf, asn1->data, asn1->length);
+    return 1;
+}
+
+int
+GetX509NameRawBytes(
+    X509_NAME* x509Name,
+    unsigned char* pBuf,
+    int cBuf)
+{
+    if (!x509Name || !x509Name->bytes)
+    {
+        return 0;
+    }
+
+    if (!pBuf || cBuf < x509Name->bytes->length)
+    {
+        return -x509Name->bytes->length;
+    }
+
+    memcpy(pBuf, x509Name->bytes->data, x509Name->bytes->length);
+    return 1;
+}
+
+int
+GetEkuFieldCount(
+    EXTENDED_KEY_USAGE* eku)
+{
+    return sk_ASN1_OBJECT_num(eku);
+}
+
+ASN1_OBJECT*
+GetEkuField(
+    EXTENDED_KEY_USAGE* eku,
+    int loc)
+{
+    return sk_ASN1_OBJECT_value(eku, loc);
 }
