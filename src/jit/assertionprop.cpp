@@ -459,8 +459,8 @@ void                Compiler::optAddCopies()
             tree->gtOp.gtOp1  = newAsgn;
             tree->gtOp.gtOp2  = copyAsgn;
 
-            tree->gtFlags    |= ( newAsgn->gtFlags & GTF_GLOB_EFFECT);
-            tree->gtFlags    |= (copyAsgn->gtFlags & GTF_GLOB_EFFECT);
+            tree->gtFlags    |= ( newAsgn->gtFlags & GTF_ALL_EFFECT);
+            tree->gtFlags    |= (copyAsgn->gtFlags & GTF_ALL_EFFECT);
         }
 
 #ifdef DEBUG
@@ -3769,7 +3769,7 @@ EXPSET_TP Compiler::optImpliedByConstAssertion(AssertionDsc* constAssertion)
         case O2K_CONST_INT:
             // Is the const assertion's constant equal/not equal to the implied assertion?
             usable = ((impAssertion->assertionKind == OAK_EQUAL) && (impAssertion->op2.u1.iconVal == iconVal)) ||
-                      (impAssertion->assertionKind == OAK_NOT_EQUAL) && (impAssertion->op2.u1.iconVal != iconVal);
+                     ((impAssertion->assertionKind == OAK_NOT_EQUAL) && (impAssertion->op2.u1.iconVal != iconVal));
             break;
         }
 

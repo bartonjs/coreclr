@@ -3521,8 +3521,6 @@ void ExceptionTracker::PopTrackers(
 // Save the state of the source exception tracker
 void ExceptionTracker::PartialTrackerState::Save(const ExceptionTracker* pSourceTracker)
 {
-    m_sfResumeStackFrame = pSourceTracker->m_sfResumeStackFrame;
-    m_ScannedStackRange = pSourceTracker->m_ScannedStackRange;
     m_uCatchToCallPC = pSourceTracker->m_uCatchToCallPC;
     m_pClauseForCatchToken = pSourceTracker->m_pClauseForCatchToken;
     m_ClauseForCatch = pSourceTracker->m_ClauseForCatch;
@@ -3536,8 +3534,6 @@ void ExceptionTracker::PartialTrackerState::Save(const ExceptionTracker* pSource
 // Restore the state into the target exception tracker
 void ExceptionTracker::PartialTrackerState::Restore(ExceptionTracker* pTargetTracker)
 {
-    pTargetTracker->m_sfResumeStackFrame = m_sfResumeStackFrame;
-    pTargetTracker->m_ScannedStackRange = m_ScannedStackRange;
     pTargetTracker->m_uCatchToCallPC = m_uCatchToCallPC;
     pTargetTracker->m_pClauseForCatchToken = m_pClauseForCatchToken;
     pTargetTracker->m_ClauseForCatch = m_ClauseForCatch;
@@ -3718,9 +3714,6 @@ ExceptionTracker* ExceptionTracker::GetOrCreateTracker(
             previousTrackerPartialState.Restore(pNewTracker);
             // Reset the 'unwind has started' flag to indicate we are in the first pass again
             pNewTracker->m_ExceptionFlags.ResetUnwindHasStarted();
-            // Remember the current scanned stack range so that we can restore it after
-            // switching to the 2nd pass.
-            pNewTracker->m_secondPassInitialScannedStackRange = pNewTracker->m_ScannedStackRange;
         }
 
         CONSISTENCY_CHECK(pNewTracker->IsValid());
@@ -3873,7 +3866,7 @@ ExceptionTracker* ExceptionTracker::GetOrCreateTracker(
                 // We have to detect this transition because otherwise we break when unmanaged code
                 // catches our exceptions.
                 EH_LOG((LL_INFO100, ">>tracker transitioned to second pass\n"));
-                pTracker->m_ScannedStackRange = pTracker->m_secondPassInitialScannedStackRange;
+                pTracker->m_ScannedStackRange.Reset();
 
                 pTracker->m_ExceptionFlags.SetUnwindHasStarted();
                 if (pTracker->m_ExceptionFlags.UnwindingToFindResumeFrame())
@@ -4594,10 +4587,10 @@ VOID DECLSPEC_NORETURN UnwindManagedExceptionPass1(PAL_SEHException& ex)
 
             *currentFlags = firstPassFlags;
 
-            // Pop the last managed frame so that when the native frames are unwound and
-            // the UnwindManagedExceptionPass1 is resumed at the next managed frame, that
-            // managed frame is the current one set in the thread object.
-            GetThread()->GetFrame()->Pop();
+            // Pop all frames that are below the block of native frames and that would be
+            // in the unwound part of the stack when UnwindManagedExceptionPass1 is resumed 
+            // at the next managed frame.
+            UnwindFrameChain(GetThread(), (VOID*)frameContext.Rsp);
 
             // Now we need to unwind the native frames until we reach managed frames again or the exception is
             // handled in the native code.
@@ -4625,7 +4618,7 @@ VOID DECLSPEC_NORETURN DispatchManagedException(PAL_SEHException& ex)
 
 VOID PALAPI HandleHardwareException(PAL_SEHException* ex)
 {
-    if (ex->ExceptionRecord.ExceptionCode != STATUS_BREAKPOINT)
+    if (ex->ExceptionRecord.ExceptionCode != STATUS_BREAKPOINT && ex->ExceptionRecord.ExceptionCode != STATUS_SINGLE_STEP)
     {
         // A hardware exception is handled only if it happened in a jitted code or 
         // in one of the JIT helper functions (JIT_MemSet, ...)
@@ -4640,11 +4633,48 @@ VOID PALAPI HandleHardwareException(PAL_SEHException* ex)
             GCX_COOP();
             fef.InitAndLink(&ex->ContextRecord);
 
-            DispatchManagedException(*ex);
+            // We throw the exception and catch it right away so that in case the DispatchManagedException
+            // needs to cross managed to native stack frames boundary, there is an exception that can
+            // be rethrow in the StartUnwindingNativeFrames.
+            try
+            {
+                throw *ex;
+            }
+            catch (PAL_SEHException& ex2)
+            {
+                DispatchManagedException(ex2);
+            }
             UNREACHABLE();
         }
 
-        _ASSERTE(!"HandleHardwareException: Hardware exception happened out of managed code");
+        _ASSERTE(!"HandleHardwareException: Hardware exception happened out of managed code");        
+    }
+    else 
+    {
+        // This is a breakpoint or single step stop, we report it to the debugger.
+        Thread *pThread = GetThread(); 
+        if (pThread != NULL && g_pDebugInterface != NULL)
+        {
+            if (ex->ExceptionRecord.ExceptionCode == STATUS_BREAKPOINT)   
+            {
+                // If this is breakpoint context, it is set up to point to an instruction after the break instruction.
+                // But debugger expects to see context that points to the break instruction, that's why we correct it.
+                SetIP(&ex->ContextRecord, GetIP(&ex->ContextRecord) - CORDbg_BREAK_INSTRUCTION_SIZE);
+                ex->ExceptionRecord.ExceptionAddress = (void *)GetIP(&ex->ContextRecord);
+            }
+
+            if (g_pDebugInterface->FirstChanceNativeException(&ex->ExceptionRecord,
+                                                          &ex->ContextRecord,
+                                                          ex->ExceptionRecord.ExceptionCode,
+                                                          pThread))
+            {
+                RtlRestoreContext(&ex->ContextRecord, &ex->ExceptionRecord);
+            } 
+            else 
+            {
+                _ASSERTE(!"Looks like a random breakpoint/trap that was not prepared by the EE debugger");
+            }
+        }
     }
     EEPOLICY_HANDLE_FATAL_ERROR(COR_E_EXECUTIONENGINE);
 }
@@ -5507,6 +5537,15 @@ void ExceptionTracker::StackRange::CombineWith(StackFrame sfCurrent, StackRange*
     }
     else
     {
+#ifdef FEATURE_PAL
+        // When the current range is empty, copy the low bound too. Otherwise a degenerate range would get
+        // created and tests for stack frame in the stack range would always fail.
+        // TODO: Check if we could enable it for non-PAL as well.
+        if (IsEmpty())
+        {
+            m_sfLowBound = pPreviousRange->m_sfLowBound;
+        }
+#endif // FEATURE_PAL
         m_sfHighBound = pPreviousRange->m_sfHighBound;
     }
 }
@@ -6243,8 +6282,8 @@ StackFrame ExceptionTracker::FindParentStackFrameHelper(CrawlFrame* pCF,
 
 lExit: ;
 
-    STRESS_LOG3(LF_EH|LF_GCROOTS, LL_INFO100, "Returning" FMT_ADDR "as the parent stack frame for %s" FMT_ADDR "\n",
-                DBG_ADDR(sfResult.SP), fIsFilterFunclet ? "filter funclet" : "funclet", DBG_ADDR(csfCurrent.SP));
+    STRESS_LOG3(LF_EH|LF_GCROOTS, LL_INFO100, "Returning 0x%p as the parent stack frame for %s 0x%p\n",
+                sfResult.SP, fIsFilterFunclet ? "filter funclet" : "funclet", csfCurrent.SP);
 
     return sfResult;
 }

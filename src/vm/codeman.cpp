@@ -1518,10 +1518,6 @@ BOOL EEJitManager::LoadJIT()
 
     bool fUseRyuJit = (CLRConfig::GetConfigValue(CLRConfig::INTERNAL_UseRyuJit) == 1); // uncached access, since this code is run no more than one time
 
-    // ****** TODO: Until the registry value is set by the .NET 4.6 installer, we pretend .NET 4.6 has been installed, which causes
-    // ******       RyuJit to be used by default.
-    fUseRyuJit = true;
-
     if ((!IsCompilationProcess() || !fUseRyuJit) &&     // Use RyuJIT for all NGEN, unless we're falling back to JIT64 for everything.
         (newJitCompiler != nullptr))    // the main JIT must successfully load before we try loading the fallback JIT
     {
@@ -2393,7 +2389,7 @@ EEJitManager::DomainCodeHeapList *EEJitManager::GetCodeHeapList(MethodDesc *pMD,
     for (int i=0; i < count; i++)
     {
         if (ppList[i]->m_pAllocator == pAllocator ||
-            !fCanUnload && !ppList[i]->m_pAllocator->CanUnload())
+            (!fCanUnload && !ppList[i]->m_pAllocator->CanUnload()))
         {
             pList = ppList[i];
             break;

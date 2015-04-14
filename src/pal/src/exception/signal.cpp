@@ -534,6 +534,10 @@ static void common_signal_handler(PEXCEPTION_POINTERS pointers, int code,
     sigset_t signal_set;
     CONTEXT context;
 
+    // Pre-populate context with data from current frame, because ucontext doesn't have some data (e.g. SS register)
+    // which is required for restoring context
+    RtlCaptureContext(&context);
+
     // Fill context record with required information. from pal.h :
     // On non-Win32 platforms, the CONTEXT pointer in the
     // PEXCEPTION_POINTERS will contain at least the CONTEXT_CONTROL registers.
@@ -555,8 +559,7 @@ static void common_signal_handler(PEXCEPTION_POINTERS pointers, int code,
         PAL_SEHException exception(pointers->ExceptionRecord, pointers->ContextRecord);
 
         g_hardwareExceptionHandler(&exception);
-
-        ASSERT("HandleHardwareException has returned, it should not.\n");
+        ASSERT("HardwareExceptionHandler has returned, it should not.");
     }
     else
     {
