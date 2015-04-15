@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.12.2)
 
 include(configure.cmake)
 
-project(CoreClrPal)
+project(coreclrpal)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
@@ -149,19 +149,19 @@ set(SOURCES
   thread/tls.cpp
 )
 
-add_library(CoreClrPal
-  STATIC
+add_library(coreclrpal
+  SHARED
   ${SOURCES}
   ${PLATFORM_SOURCES}
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL Linux)
-target_link_libraries(CoreClrPal
-  pthread
-  rt
-  dl
-  unwind
-)
+  target_link_libraries(coreclrpal
+    pthread
+    rt
+    dl
+    unwind
+  )
 endif(CMAKE_SYSTEM_NAME STREQUAL Linux)
 
 if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
@@ -169,7 +169,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
   find_library(CORESERVICES CoreServices)
   find_library(SECURITY Security)
   find_library(SYSTEM System)
-  target_link_libraries(CoreClrPal
+  target_link_libraries(coreclrpal
     ${COREFOUNDATION}
     ${CORESERVICES}
     ${SECURITY}
@@ -178,3 +178,5 @@ if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 endif(CMAKE_SYSTEM_NAME STREQUAL Darwin)
 
 add_subdirectory(examples)
+
+install(TARGETS coreclrpal DESTINATION .)

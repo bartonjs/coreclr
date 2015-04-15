@@ -89,10 +89,11 @@ else(WIN32)
   )
 
   set(SOS_LIBRARY
+    coreclrpal
     corguids
-    mscordaccore
     debugshim
     dbgutil
+    palrt
   )
 endif(WIN32)
 
