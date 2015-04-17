@@ -94,6 +94,8 @@ GetX509SignatureAlgorithm(
     {
         return OBJ_nid2ln(OBJ_obj2nid(x509->sig_alg->algorithm));
     }
+
+    return NULL;
 }
 
 ASN1_BIT_STRING*
