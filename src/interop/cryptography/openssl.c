@@ -203,6 +203,12 @@ GetX509NameInfo(
 
         if (name)
         {
+            ASN1_STRING* cn = NULL;
+            ASN1_STRING* ou = NULL;
+            ASN1_STRING* o = NULL;
+            ASN1_STRING* e = NULL;
+            ASN1_STRING* firstRdn = NULL;
+
             // Walk the list backwards because it is stored in stack order
             for (int i = X509_NAME_entry_count(name) - 1; i >= 0; --i)
             {
@@ -223,44 +229,57 @@ GetX509NameInfo(
 
                 int nid = OBJ_obj2nid(oid);
 
-                if (nid == NID_commonName ||
-                    nid == NID_organizationName ||
-                    nid == NID_organizationalUnitName)
+                if (nid == NID_commonName)
                 {
-                    BIO* b = BIO_new(BIO_s_mem());
-                    ASN1_STRING_print_ex(b, str, 0);
-                    return b;
+                    // CN wins, so no need to keep looking.
+                    cn = str;
+                    break;
+                }
+                else if (nid == NID_organizationalUnitName)
+                {
+                    ou = str;
+                }
+                else if (nid == NID_organizationName)
+                {
+                    o = str;
+                }
+                else if (nid == NID_pkcs9_emailAddress)
+                {
+                    e = str;
+                }
+                else if (!firstRdn)
+                {
+                    firstRdn = str;
                 }
             }
-        }
-    }
 
-    if (nameType == NAME_TYPE_SIMPLE)
-    {
-        X509_NAME* name = forIssuer ? x509->cert_info->issuer : x509->cert_info->subject;
+            ASN1_STRING* answer = cn;
 
-        if (name)
-        {
-            // Walk the list backwards because it is stored in stack order
-            for (int i = X509_NAME_entry_count(name) - 1; i >= 0; --i)
+            // If there was no CN, but there was something, then perform fallbacks.
+            if (!answer && firstRdn)
             {
-                X509_NAME_ENTRY* entry = X509_NAME_get_entry(name, i);
+                answer = ou;
 
-                if (!entry)
+                if (!answer)
                 {
-                    continue;
+                    answer = o;
                 }
 
-                ASN1_OBJECT* oid = X509_NAME_ENTRY_get_object(entry);
-                ASN1_STRING* str = X509_NAME_ENTRY_get_data(entry);
-
-                if (!oid || !str)
+                if (!answer)
                 {
-                    continue;
+                    answer = e;
                 }
 
+                if (!answer)
+                {
+                    answer = firstRdn;
+                }
+            }
+
+            if (answer)
+            {
                 BIO* b = BIO_new(BIO_s_mem());
-                ASN1_STRING_print_ex(b, str, 0);
+                ASN1_STRING_print_ex(b, answer, 0);
                 return b;
             }
         }
