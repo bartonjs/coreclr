@@ -170,14 +170,14 @@ GetX509NameRawBytes(
 }
 
 int
-GetEkuFieldCount(
+GetX509EkuFieldCount(
     EXTENDED_KEY_USAGE* eku)
 {
     return sk_ASN1_OBJECT_num(eku);
 }
 
 ASN1_OBJECT*
-GetEkuField(
+GetX509EkuField(
     EXTENDED_KEY_USAGE* eku,
     int loc)
 {
