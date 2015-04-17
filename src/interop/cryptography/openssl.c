@@ -262,7 +262,8 @@ GetX509NameInfo(
                 break;
         }
 
-        STACK_OF(GENERAL_NAME)* altNames = X509_get_ext_d2i(x509, forIssuer ? NID_issuer_alt_name : NID_subject_alt_name, NULL, NULL);
+        STACK_OF(GENERAL_NAME)* altNames =
+            X509_get_ext_d2i(x509, forIssuer ? NID_issuer_alt_name : NID_subject_alt_name, NULL, NULL);
 
         if (altNames)
         {
