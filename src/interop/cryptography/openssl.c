@@ -235,6 +235,37 @@ GetX509NameInfo(
         }
     }
 
+    if (nameType == NAME_TYPE_SIMPLE)
+    {
+        X509_NAME* name = forIssuer ? x509->cert_info->issuer : x509->cert_info->subject;
+
+        if (name)
+        {
+            // Walk the list backwards because it is stored in stack order
+            for (int i = X509_NAME_entry_count(name) - 1; i >= 0; --i)
+            {
+                X509_NAME_ENTRY* entry = X509_NAME_get_entry(name, i);
+
+                if (!entry)
+                {
+                    continue;
+                }
+
+                ASN1_OBJECT* oid = X509_NAME_ENTRY_get_object(entry);
+                ASN1_STRING* str = X509_NAME_ENTRY_get_data(entry);
+
+                if (!oid || !str)
+                {
+                    continue;
+                }
+
+                BIO* b = BIO_new(BIO_s_mem());
+                ASN1_STRING_print_ex(b, str, 0);
+                return b;
+            }
+        }
+    }
+
     if (nameType == NAME_TYPE_SIMPLE ||
         nameType == NAME_TYPE_DNS ||
         nameType == NAME_TYPE_DNSALT ||
@@ -246,11 +277,11 @@ GetX509NameInfo(
 
         switch (nameType)
         {
-            case NAME_TYPE_SIMPLE:
             case NAME_TYPE_DNS:
             case NAME_TYPE_DNSALT:
                 expectedType = GEN_DNS;
                 break;
+            case NAME_TYPE_SIMPLE:
             case NAME_TYPE_EMAIL:
                 expectedType = GEN_EMAIL;
                 break;
