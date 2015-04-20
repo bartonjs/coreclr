@@ -37,7 +37,7 @@ GetX509Thumbprint(
     return 1;
 }
 
-ASN1_INTEGER*
+ASN1_TIME*
 GetX509NotBefore(
     X509* x509)
 {
@@ -49,7 +49,7 @@ GetX509NotBefore(
     return NULL;
 }
 
-ASN1_INTEGER*
+ASN1_TIME*
 GetX509NotAfter(
     X509* x509)
 {
