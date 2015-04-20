@@ -20,8 +20,14 @@ add_library(System.Security.Cryptography.Native
 # Disable the "lib" prefix.
 set_target_properties(System.Security.Cryptography.Native PROPERTIES PREFIX "")
 
+find_library(CRYPTO NAMES crypto)
+if(CRYPTO STREQUAL CRYPTO-NOTFOUND)
+    message(WARNING "Cannot find libcrypto, skipping build for System.Security.Cryptography.Native. .NET cryptography is not expected to function. Try installing openssl-dev (or the appropriate package for your platform)")
+    return()
+endif()
+
 target_link_libraries(System.Security.Cryptography.Native
-  crypto
+  ${CRYPTO}
 )
 
 install (TARGETS System.Security.Cryptography.Native DESTINATION .)
