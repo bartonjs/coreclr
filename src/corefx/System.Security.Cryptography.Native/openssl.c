@@ -98,6 +98,36 @@ GetX509SignatureAlgorithm(
     return NULL;
 }
 
+int
+GetX509PublicKeyParameterBytes(
+    X509* x509,
+    unsigned char* pBuf,
+    int cBuf)
+{
+    if (!x509 || !x509->cert_info || !x509->cert_info->key || !x509->cert_info->key->algor)
+    {
+        return 0;
+    }
+
+    ASN1_TYPE* parameter = x509->cert_info->key->algor->parameter;
+    int len = i2d_ASN1_TYPE(parameter, NULL);
+
+    if (cBuf < len)
+    {
+        return -len;
+    }
+
+    unsigned char* pBuf2 = pBuf;
+    len = i2d_ASN1_TYPE(parameter, &pBuf2);
+
+    if (len > 0)
+    {
+        return 1;
+    }
+
+    return 0;
+}
+
 ASN1_BIT_STRING*
 GetX509PublicKeyBytes(
     X509* x509)
