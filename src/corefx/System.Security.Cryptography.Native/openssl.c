@@ -74,25 +74,25 @@ GetX509Version(
     return -1;
 }
 
-const char*
+ASN1_OBJECT*
 GetX509PublicKeyAlgorithm(
     X509* x509)
 {
     if (x509 && x509->cert_info && x509->cert_info->key && x509->cert_info->key->algor)
     {
-        return OBJ_nid2ln(OBJ_obj2nid(x509->cert_info->key->algor->algorithm));
+        return x509->cert_info->key->algor->algorithm;
     }
 
     return NULL;
 }
 
-const char*
+ASN1_OBJECT*
 GetX509SignatureAlgorithm(
     X509* x509)
 {
     if (x509 && x509->sig_alg && x509->sig_alg->algorithm)
     {
-        return OBJ_nid2ln(OBJ_obj2nid(x509->sig_alg->algorithm));
+        return x509->sig_alg->algorithm;
     }
 
     return NULL;
