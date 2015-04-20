@@ -153,7 +153,7 @@ GetX509PublicKeyAlgorithm(
 
 /*
 Function:
-GetX509PublicKeyAlgorithm
+GetX509SignatureAlgorithm
 
 Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader to identify the
 algorithm used by the Certificate Authority for signing the certificate.
@@ -332,7 +332,7 @@ Used by System.Security.Cryptography.X509Certificates' OpenSslX509Encoder to ide
 number of Extended Key Usage OIDs present in the EXTENDED_KEY_USAGE structure.
 
 Return values:
-0 if the field caount cannot be determined, or the count of OIDs present in the EKU.
+0 if the field count cannot be determined, or the count of OIDs present in the EKU.
 Note that 0 does not always indicate an error, merely that GetX509EkuField should not be called.
 */
 int
@@ -388,12 +388,12 @@ GetX509NameInfo(
     // Algorithm behaviors (pseudocode).  When forIssuer is true, replace "Subject" with "Issuer" and
     // SAN (Subject Alternative Names) with IAN (Issuer Alternative Names).
     //
-    // SimpleName: Subject[CN] ?? Subject[OU] ?? Subject[O] ?? Subject[E] ?? Subject.Rdns.First() ?? SAN.Entries.First(type == GEN_EMAIL);
-    // EmailName: SAN.Entries.First(type == GEN_EMAIL) ?? Subject[E];
-    // UpnName: SAN.Entries.First(type == GEN_OTHER && entry.AsOther().OID == szOidUpn).AsOther().Value;
-    // DnsName: SAN.Entries.First(type == GEN_DNS) ?? Subject[CN];
-    // DnsFromAlternativeName: SAN.Entries.First(type == GEN_DNS);
-    // UrlName: SAN.Entries.First(type == GEN_URI);
+    // SimpleName: Subject[CN] ?? Subject[OU] ?? Subject[O] ?? Subject[E] ?? Subject.Rdns.FirstOrDefault() ?? SAN.Entries.FirstOrDefault(type == GEN_EMAIL);
+    // EmailName: SAN.Entries.FirstOrDefault(type == GEN_EMAIL) ?? Subject[E];
+    // UpnName: SAN.Entries.FirsOrDefaultt(type == GEN_OTHER && entry.AsOther().OID == szOidUpn).AsOther().Value;
+    // DnsName: SAN.Entries.FirstOrDefault(type == GEN_DNS) ?? Subject[CN];
+    // DnsFromAlternativeName: SAN.Entries.FirstOrDefault(type == GEN_DNS);
+    // UrlName: SAN.Entries.FirstOrDefault(type == GEN_URI);
     if (nameType == NAME_TYPE_SIMPLE)
     {
         X509_NAME* name = forIssuer ? x509->cert_info->issuer : x509->cert_info->subject;
