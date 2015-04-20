@@ -359,11 +359,11 @@ GetX509NameInfo(
 
                     switch (nameType)
                     {
-                        case NAME_TYPE_SIMPLE:
                         case NAME_TYPE_DNS:
                         case NAME_TYPE_DNSALT:
                             str = altName->d.dNSName;
                             break;
+                        case NAME_TYPE_SIMPLE:
                         case NAME_TYPE_EMAIL:
                             str = altName->d.rfc822Name;
                             break;
