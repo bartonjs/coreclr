@@ -10,13 +10,31 @@
 #include <openssl/x509.h>
 #include <openssl/x509v3.h>
 
+// See X509NameType.SimpleName
 #define NAME_TYPE_SIMPLE 0
+// See X509NameType.EmailName
 #define NAME_TYPE_EMAIL 1
+// See X509NameType.UpnName
 #define NAME_TYPE_UPN 2
+// See X509NameType.DnsName
 #define NAME_TYPE_DNS 3
+// See X509NameType.DnsFromAlternateName
 #define NAME_TYPE_DNSALT 4
+// See X509NameType.UrlName
 #define NAME_TYPE_URL 5
 
+/*
+Function:
+GetX509Thumbprint
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader to copy the SHA1
+digest of the certificate (the thumbprint) into a managed buffer.
+
+Return values:
+0: Invalid X509 pointer
+1: Data was copied
+Any negative value: The input buffer size was reported as insufficient. A buffer of size ABS(return) is required.
+*/
 int
 GetX509Thumbprint(
     X509* x509,
@@ -37,6 +55,17 @@ GetX509Thumbprint(
     return 1;
 }
 
+/*
+Function:
+GetX509NotBefore
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader to identify the
+beginning of the validity period of the certificate in question.
+
+Return values:
+NULL if the validity cannot be determined, a pointer to the ASN1_TIME structure for the NotBefore value
+otherwise.
+*/
 ASN1_TIME*
 GetX509NotBefore(
     X509* x509)
@@ -49,6 +78,17 @@ GetX509NotBefore(
     return NULL;
 }
 
+/*
+Function:
+GetX509NotAfter
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader to identify the
+end of the validity period of the certificate in question.
+
+Return values:
+NULL if the validity cannot be determined, a pointer to the ASN1_TIME structure for the NotAfter value
+otherwise.
+*/
 ASN1_TIME*
 GetX509NotAfter(
     X509* x509)
@@ -61,6 +101,20 @@ GetX509NotAfter(
     return NULL;
 }
 
+/*
+Function:
+GetX509Version
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader to identify the
+X509 data format version for this certificate.
+
+Return values:
+-1 if the value cannot be determined
+The encoded value of the version, otherwise:
+  0: X509v1
+  1: X509v2
+  2: X509v3
+*/
 int
 GetX509Version(
     X509* x509)
@@ -74,6 +128,17 @@ GetX509Version(
     return -1;
 }
 
+/*
+Function:
+GetX509PublicKeyAlgorithm
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader to identify the
+algorithm the public key is associated with.
+
+Return values:
+NULL if the algorithm cannot be determined, otherwise a pointer to the OpenSSL ASN1_OBJECT structure
+describing the object type.
+*/
 ASN1_OBJECT*
 GetX509PublicKeyAlgorithm(
     X509* x509)
@@ -86,6 +151,17 @@ GetX509PublicKeyAlgorithm(
     return NULL;
 }
 
+/*
+Function:
+GetX509PublicKeyAlgorithm
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader to identify the
+algorithm used by the Certificate Authority for signing the certificate.
+
+Return values:
+NULL if the algorithm cannot be determined, otherwise a pointer to the OpenSSL ASN1_OBJECT structure
+describing the object type.
+*/
 ASN1_OBJECT*
 GetX509SignatureAlgorithm(
     X509* x509)
@@ -98,6 +174,18 @@ GetX509SignatureAlgorithm(
     return NULL;
 }
 
+/*
+Function:
+GetX509PublicKeyParameterBytes
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader to copy out the
+parameters to the algorithm used by the certificate public key
+
+Return values:
+0: Invalid X509 pointer
+1: Data was copied
+Any negative value: The input buffer size was reported as insufficient. A buffer of size ABS(return) is required.
+*/
 int
 GetX509PublicKeyParameterBytes(
     X509* x509,
@@ -128,6 +216,17 @@ GetX509PublicKeyParameterBytes(
     return 0;
 }
 
+/*
+Function:
+GetX509PublicKeyBytes
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader to obtain the
+raw bytes of the public key.
+
+Return values:
+NULL if the public key cannot be determined, a pointer to the ASN1_BIT_STRING structure representing
+the public key.
+*/
 ASN1_BIT_STRING*
 GetX509PublicKeyBytes(
     X509* x509)
@@ -140,25 +239,39 @@ GetX509PublicKeyBytes(
     return NULL;
 }
 
-// Many ASN1 types are actually the same type in OpenSSL:
-// STRING
-// INTEGER
-// ENUMERATED
-// BIT_STRING
-// OCTET_STRING
-// PRINTABLESTRING
-// T61STRING
-// IA5STRING
-// GENERALSTRING
-// UNIVERSALSTRING
-// BMPSTRING
-// UTCTIME
-// TIME
-// GENERALIZEDTIME
-// VISIBLEStRING
-// UTF8STRING
-//
-// So this function will really work on all of them.
+/*
+Function:
+GetAsn1StringBytes
+
+Used by the NativeCrypto shim type to extract byte[] data from OpenSSL ASN1_* types whenever a byte[] is called
+for in managed code.
+
+Return values:
+0: Invalid X509 pointer
+1: Data was copied
+Any negative value: The input buffer size was reported as insufficient. A buffer of size ABS(return) is required.
+
+Remarks:
+ Many ASN1 types are actually the same type in OpenSSL:
+   STRING
+   INTEGER
+   ENUMERATED
+   BIT_STRING
+   OCTET_STRING
+   PRINTABLESTRING
+   T61STRING
+   IA5STRING
+   GENERALSTRING
+   UNIVERSALSTRING
+   BMPSTRING
+   UTCTIME
+   TIME
+   GENERALIZEDTIME
+   VISIBLEStRING
+   UTF8STRING
+
+ So this function will really work on all of them.
+*/
 int
 GetAsn1StringBytes(
     ASN1_STRING* asn1,
@@ -179,6 +292,18 @@ GetAsn1StringBytes(
     return 1;
 }
 
+/*
+Function:
+GetX509NameRawBytes
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader to obtain the
+DER encoded value of an X500DistinguishedName.
+
+Return values:
+0: Invalid X509 pointer
+1: Data was copied
+Any negative value: The input buffer size was reported as insufficient. A buffer of size ABS(return) is required.
+*/
 int
 GetX509NameRawBytes(
     X509_NAME* x509Name,
@@ -199,6 +324,17 @@ GetX509NameRawBytes(
     return 1;
 }
 
+/*
+Function:
+GetX509EkuFieldCount
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509Encoder to identify the
+number of Extended Key Usage OIDs present in the EXTENDED_KEY_USAGE structure.
+
+Return values:
+0 if the field caount cannot be determined, or the count of OIDs present in the EKU.
+Note that 0 does not always indicate an error, merely that GetX509EkuField should not be called.
+*/
 int
 GetX509EkuFieldCount(
     EXTENDED_KEY_USAGE* eku)
@@ -206,6 +342,17 @@ GetX509EkuFieldCount(
     return sk_ASN1_OBJECT_num(eku);
 }
 
+/*
+Function:
+GetX509EkuField
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509Encoder to get a pointer to the
+ASN1_OBJECT structure which represents the OID in a particular spot in the EKU.
+
+Return values:
+NULL if eku is NULL or loc is out of bounds, otherwise a pointer to the ASN1_OBJECT structure encoding
+that particular OID.
+*/
 ASN1_OBJECT*
 GetX509EkuField(
     EXTENDED_KEY_USAGE* eku,
@@ -214,6 +361,17 @@ GetX509EkuField(
     return sk_ASN1_OBJECT_value(eku, loc);
 }
 
+/*
+Function:
+GetX509NameInfo
+
+Used by System.Security.Cryptography.X509Certificates' OpenSslX509CertificateReader as the entire
+implementation of X509Certificate2.GetNameInfo.
+
+Return values:
+NULL if the certificate is invalid or no name information could be found, otherwise a pointer to a
+memory-backed BIO structure which contains the answer to the GetNameInfo query
+*/
 BIO*
 GetX509NameInfo(
     X509* x509,
@@ -227,6 +385,15 @@ GetX509NameInfo(
         return NULL;
     }
 
+    // Algorithm behaviors (pseudocode).  When forIssuer is true, replace "Subject" with "Issuer" and
+    // SAN (Subject Alternative Names) with IAN (Issuer Alternative Names).
+    //
+    // SimpleName: Subject[CN] ?? Subject[OU] ?? Subject[O] ?? Subject[E] ?? Subject.Rdns.First() ?? SAN.Entries.First(type == GEN_EMAIL);
+    // EmailName: SAN.Entries.First(type == GEN_EMAIL) ?? Subject[E];
+    // UpnName: SAN.Entries.First(type == GEN_OTHER && entry.AsOther().OID == szOidUpn).AsOther().Value;
+    // DnsName: SAN.Entries.First(type == GEN_DNS) ?? Subject[CN];
+    // DnsFromAlternativeName: SAN.Entries.First(type == GEN_DNS);
+    // UrlName: SAN.Entries.First(type == GEN_URI);
     if (nameType == NAME_TYPE_SIMPLE)
     {
         X509_NAME* name = forIssuer ? x509->cert_info->issuer : x509->cert_info->subject;
